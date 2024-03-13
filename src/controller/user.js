@@ -1,5 +1,6 @@
 import { findIndex } from "../common/helper.js"
-
+import DB_CONFIG from '../config/dbConfig.js'
+import {MongoClient} from 'mongodb'
 const user = [{
     id:1,
     name:"Vignesh",
@@ -45,16 +46,26 @@ const getUserById = (req,res)=>{
 }
 
 const addUser = (req,res)=>{
+    await client.connect()
     try {
-        let id = user.length?user[user.length-1].id+1:1
-
-        req.body.id = id
-        
-        user.push(req.body)
-
-        res.status(200).send({
-            message:"User Added Successfully"
-        })
+        const db = await client.db(DB_CONFIG.DB_NAME)
+        //check if the email exists in db
+        const user = await db.collection('users').findOne({email:req.body.email})
+        if(!user)
+        {
+            //if wmail not found create the user
+            let newaUser = await db.collection('users').insertOne(req.body)
+            res.status(200).send({
+                message:"User Added Successfully"
+            })
+        }
+        else
+        {
+            //if email is found respond error message
+            res.status(200).send({
+                 message:`User with ${req.body.email} already exists`
+            })
+        }
     } catch (error) {
         res.status(500).send({
             message:"Internal Server Error"
